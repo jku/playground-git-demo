@@ -1,0 +1,16 @@
+name: Signing event
+
+# Controls when the workflow will run
+on:
+  # Triggers the workflow on push or pull request events but only for the "main" branch
+  create:
+    branches:
+
+jobs:
+  handle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Run a one-line script
+        run: echo "Branch created $GITHUB_REF $GITHUB_SHA"
