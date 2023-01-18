@@ -1,14 +1,59 @@
 name: Signing event
 
+permissions: {}
+
 on:
-  create:
+  push:
+    branches:
+      - 'sign/**'
+  workflow_dispatch:
 
 jobs:
   handle:
     runs-on: ubuntu-latest
-    if: |
-      vars.GITHUB_REF_TYPE == 'branch' &&
-      startsWith(vars.GITHUB_REF_NAME, 'sign/')
+    permissions:
+      contents: read
+      issues: write
     steps:
       - name: Run a one-line script
         run: echo "Branch created $GITHUB_REF $GITHUB_SHA"
+
+      - name: Find the issue or open a new one
+        id: find-issue
+        uses: actions/github-script@d556feaca394842dc55e4734bf3bb9f685482fa0
+        with:
+          script: |
+            const repo = context.repo.owner + "/" + context.repo.repo
+            const issues = await github.rest.search.issuesAndPullRequests({
+              q: "label:${{github.ref_name}}+state:open+type:issue+repo:" + repo,
+            })
+
+            if (issues.data.total_count > 1) {
+              core.setFailed("Found more than one issue with same label")
+            }
+
+            if (issues.data.total_count == 0) {
+              console.log("Creating issue")
+              const response = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: "Signing event: ${{github.ref_name}}",
+                body: "TODO: document signing event here",
+                labels: ["${{github.ref_name}}"],
+              })
+              return response.data.number
+            } else {
+              console.log("Found existing issue")
+              return issues.data.items[0].number
+            }
+
+      - name: Update signing status
+        uses: actions/github-script@d556feaca394842dc55e4734bf3bb9f685482fa0
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: ${{ steps.find-issue.outputs.result }},
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: 'TODO: Branch just moved, update signing status here'
+            })
