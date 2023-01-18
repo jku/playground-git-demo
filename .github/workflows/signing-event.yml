@@ -6,7 +6,9 @@ on:
 jobs:
   handle:
     runs-on: ubuntu-latest
-    if: ${{ vars.GITHUB_REF_TYPE == 'branch' }}
+    if: |
+      vars.GITHUB_REF_TYPE == 'branch' ||
+      vars.GITHUB_REF_NAME.startsWith('sign/')
     steps:
       - uses: actions/checkout@v3
 
