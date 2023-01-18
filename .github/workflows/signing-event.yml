@@ -1,14 +1,12 @@
 name: Signing event
 
-# Controls when the workflow will run
 on:
-  # Triggers the workflow on push or pull request events but only for the "main" branch
   create:
-    branches:
 
 jobs:
   handle:
     runs-on: ubuntu-latest
+    if: ${{ vars.GITHUB_REF_TYPE == 'branch' }}
     steps:
       - uses: actions/checkout@v3
 
