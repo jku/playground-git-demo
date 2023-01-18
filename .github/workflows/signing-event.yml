@@ -7,10 +7,8 @@ jobs:
   handle:
     runs-on: ubuntu-latest
     if: |
-      vars.GITHUB_REF_TYPE == 'branch' ||
-      vars.GITHUB_REF_NAME.startsWith('sign/')
+      vars.GITHUB_REF_TYPE == 'branch' &&
+      startsWith(vars.GITHUB_REF_NAME, 'sign/')
     steps:
-      - uses: actions/checkout@v3
-
       - name: Run a one-line script
         run: echo "Branch created $GITHUB_REF $GITHUB_SHA"
