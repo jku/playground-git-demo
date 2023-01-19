@@ -15,9 +15,27 @@ jobs:
       contents: read
       issues: write
     steps:
-      - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c
+      - name: Checkout
+        uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c
         with:
           fetch-depth: 0
+
+      - name: Checkout playground
+        uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c
+        with:
+          repository: jku/repository-playground
+          ref: git-repo
+          path: playground
+
+      - name: Setup Python
+        uses: actions/setup-python@d27e3f3d7c64b4bbf8e4abfb9b63b83e846e0435
+        with:
+          python-version: 3.11
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install -r playground/playground/requirements.txt
 
       - name: Find fork point
         id: find-fork
@@ -57,7 +75,18 @@ jobs:
               return issues.data.items[0].number
             }
 
-      - name: Update signing status
+      - name: Get Signing status
+        id: signing-status
+        if: steps.find-fork.outputs.fork != github.sha
+        run: |
+          if test -f "repository/root.json"; then
+            MSG="$(playground/playground/repo/repo status ${{ steps.find-fork.outputs.fork }})"
+          else
+            MSG="Repository does not exist yet"
+          fi
+          echo "status=$MSG" >> $GITHUB_OUTPUT
+
+      - name: Update issue
         if: steps.find-fork.outputs.fork != github.sha
         uses: actions/github-script@d556feaca394842dc55e4734bf3bb9f685482fa0
         with:
@@ -66,5 +95,5 @@ jobs:
               issue_number: ${{ steps.find-issue.outputs.result }},
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: 'TODO: Branch just moved, update signing status here'
+              body: `${{ steps.signing-status.outputs.status }}`
             })
