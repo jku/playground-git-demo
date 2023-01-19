@@ -1,0 +1,40 @@
+
+name: Signing event
+
+permissions: {}
+
+on:
+  issues:
+    types:
+      - labeled
+
+jobs:
+  handle-issue-label:
+    if: startsWith(github.event.label.name, 'sign/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c
+
+      - name: Create branch
+        run: |
+          git push origin HEAD:${{ github.event.label.name }}
+      
+      - name: Comment on issue
+        uses: actions/github-script@d556feaca394842dc55e4734bf3bb9f685482fa0
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: ${{ github.event.issue.number }},
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `
+            The branch ${{ github.event.label.name }} has been created for this
+            signing event. Please make a pull request with your metadata changes
+            to that branch.
+            })
+
