@@ -24,29 +24,19 @@ jobs:
       - name: Create branch
         id: create-branch
         run: |
-          if git ls-remote --exit-code --heads origin ${{ github.event.label.name }}; then
-            # fast-forward merge main to the existing branch
-            git merge --ff-only main:${{ github.event.label.name }}
-            git push origin ${{ github.event.label.name }}
-            echo "created=false" >> $GITHUB_OUTPUT
-          else
-            git push origin HEAD:${{ github.event.label.name }}
-            echo "created=true" >> $GITHUB_OUTPUT
-          fi
+          # push main to the signing branch
+          # * if branch didn't exist, it's created
+          # * if branch did exist but can be fast forwarded, it is
+          # * if branch exist but can't be fast-forward, the task fails
+          git push origin main:${{ github.event.label.name }}
       
       - name: Comment on issue
         uses: actions/github-script@d556feaca394842dc55e4734bf3bb9f685482fa0
         with:
           script: |
-            if (${{ steps.create-branch.outputs.created }} == 'true') {
-              const body = `The branch ${{ github.event.label.name }} was created for this signing event.
-                Please make a pull request with your metadata changes to this branch.
-              `
-            } else {
-              const body = `The branch ${{ github.event.label.name }} already exists and was fast-forwarded for this
-                signing event. Please make a pull request with your metadata changes to this branch.
-              `
-            }
+            const body = `The branch ${{ github.event.label.name }} was created (or updated) for this
+              signing event. Please make a pull request with your metadata changes to this branch.
+            `
             github.rest.issues.createComment({
               issue_number: ${{ github.event.issue.number }},
               owner: context.repo.owner,
