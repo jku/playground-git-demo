@@ -35,7 +35,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -r playground/playground/requirements.txt
+          pip install -r playground/playground/repo/requirements.txt
 
       - name: Find fork point
         id: find-fork
@@ -79,21 +79,28 @@ jobs:
         id: signing-status
         if: steps.find-fork.outputs.fork != github.sha
         run: |
+          echo "Signing branch [${{ github.ref_name }}](/${{ github.repository }}/tree/${{ github.ref_name }}) has moved to ${{ github.sha }}." > status-output
+          echo "" >> status-output
+          echo "### Current signing state" >> status-output
+
           if test -f "repository/root.json"; then
-            MSG="$(playground/playground/repo/repo status ${{ steps.find-fork.outputs.fork }})"
+            playground/playground/repo/repo status ${{ steps.find-fork.outputs.fork }} >> status-output
           else
-            MSG="Repository does not exist yet"
+            echo "Repository does not exist yet" >> status-output
           fi
-          echo "status=$MSG" >> $GITHUB_OUTPUT
+
+          cat status-output
 
       - name: Update issue
         if: steps.find-fork.outputs.fork != github.sha
         uses: actions/github-script@d556feaca394842dc55e4734bf3bb9f685482fa0
         with:
           script: |
+            const fs = require('fs')
+            const body = fs.readFileSync('./status-output').toString()
             github.rest.issues.createComment({
               issue_number: ${{ steps.find-issue.outputs.result }},
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `${{ steps.signing-status.outputs.status }}`
+              body: body,
             })
