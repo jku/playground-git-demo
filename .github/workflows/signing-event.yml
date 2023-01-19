@@ -43,6 +43,7 @@ jobs:
         run: |
           FORK=$(git merge-base origin/main $GITHUB_SHA)
           echo "fork=$FORK" >> $GITHUB_OUTPUT
+          echo "Forking point is $FORK"
 
       - name: Find the issue or open a new one
         id: find-issue
@@ -50,8 +51,6 @@ jobs:
         uses: actions/github-script@d556feaca394842dc55e4734bf3bb9f685482fa0
         with:
           script: |
-            console.log("FORK ${{ steps.find-fork.outputs.fork }}")
-            console.log("GITHUB_SHA" + context.sha)
             const repo = context.repo.owner + "/" + context.repo.repo
             const issues = await github.rest.search.issuesAndPullRequests({
               q: "label:${{github.ref_name}}+state:open+type:issue+repo:" + repo,
@@ -59,9 +58,7 @@ jobs:
 
             if (issues.data.total_count > 1) {
               core.setFailed("Found more than one issue with same label")
-            }
-
-            if (issues.data.total_count == 0) {
+            } else if (issues.data.total_count == 0) {
               console.log("Creating issue")
               const response = await github.rest.issues.create({
                 owner: context.repo.owner,
