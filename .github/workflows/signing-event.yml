@@ -27,10 +27,12 @@ jobs:
 
       - name: Find the issue or open a new one
         id: find-issue
-        if: steps.find-fork.outputs.fork != vars.GITHUB_SHA
+        if: steps.find-fork.outputs.fork != github.sha
         uses: actions/github-script@d556feaca394842dc55e4734bf3bb9f685482fa0
         with:
           script: |
+            console.log("FORK ${{ steps.find-fork.outputs.fork }}")
+            console.log("GITHUB_SHA" + context.sha)
             const repo = context.repo.owner + "/" + context.repo.repo
             const issues = await github.rest.search.issuesAndPullRequests({
               q: "label:${{github.ref_name}}+state:open+type:issue+repo:" + repo,
@@ -56,6 +58,7 @@ jobs:
             }
 
       - name: Update signing status
+        if: steps.find-fork.outputs.fork != github.sha
         uses: actions/github-script@d556feaca394842dc55e4734bf3bb9f685482fa0
         with:
           script: |
