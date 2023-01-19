@@ -9,17 +9,29 @@ on:
   workflow_dispatch:
 
 jobs:
-  handle:
+  handle-branch-push:
     runs-on: ubuntu-latest
     permissions:
       contents: read
       issues: write
     steps:
-      - name: Run a one-line script
-        run: echo "Branch created $GITHUB_REF $GITHUB_SHA"
+      - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c
+        with:
+          fetch-depth: 0
+
+      - name: Find fork point
+        id: find-fork
+        run: |
+          git show-ref
+          FORK=$(git merge-base origin/main $GITHUB_SHA)
+
+          echo fork $FORK
+          echo github_sha $GITHUB_SHA
+          echo "fork=$FORK" >> $GITHUB_OUTPUT
 
       - name: Find the issue or open a new one
         id: find-issue
+        if: steps.find-fork.outputs.fork != vars.GITHUB_SHA
         uses: actions/github-script@d556feaca394842dc55e4734bf3bb9f685482fa0
         with:
           script: |
