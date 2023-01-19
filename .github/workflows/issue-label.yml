@@ -38,13 +38,12 @@ jobs:
         uses: actions/github-script@d556feaca394842dc55e4734bf3bb9f685482fa0
         with:
           script: |
-            const body
             if (${{ steps.create-branch.outputs.created }} == 'true') {
-              body = `The branch ${{ github.event.label.name }} was created for this signing event.
+              const body = `The branch ${{ github.event.label.name }} was created for this signing event.
                 Please make a pull request with your metadata changes to this branch.
               `
             } else {
-              body = `The branch ${{ github.event.label.name }} already exists and was fast-forwarded for this
+              const body = `The branch ${{ github.event.label.name }} already exists and was fast-forwarded for this
                 signing event. Please make a pull request with your metadata changes to this branch.
               `
             }
