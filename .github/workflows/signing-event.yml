@@ -14,6 +14,7 @@ jobs:
     permissions:
       contents: read
       issues: write
+      pull-requests: write
     steps:
       - name: Checkout
         uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c
@@ -85,13 +86,16 @@ jobs:
 
           if test -f "repository/root.json"; then
             playground/playground/repo/repo status ${{ steps.find-fork.outputs.fork }} >> status-output
+            RETVAL=$?
           else
             echo "Repository does not exist yet" >> status-output
+            RETVAL=1
           fi
 
           cat status-output
+          echo "status=$RETVAL" >> $GITHUB_OUTPUT
 
-      - name: Update issue
+      - name: Update issue, file PR
         if: steps.find-fork.outputs.fork != github.sha
         uses: actions/github-script@d556feaca394842dc55e4734bf3bb9f685482fa0
         with:
@@ -104,3 +108,14 @@ jobs:
               repo: context.repo.repo,
               body: body,
             })
+
+            if (${{ steps.signing-status.outputs.status }} == 0) {
+              github.rest.pulls.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                head: '${{ github.ref_name }}',
+                base: 'main',
+                title: 'Signing event ${{ github.ref_name }}',
+                body: 'This is a Pull request for signing event ${{ github.ref_name }}, see issue #${{ steps.find-issue.outputs.result }}.',
+              })
+            }
