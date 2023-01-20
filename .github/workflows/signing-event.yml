@@ -82,25 +82,30 @@ jobs:
           echo "### Current signing state" >> status-output
 
           if test -f "repository/root.json"; then
-            playground/playground/repo/repo status ${{ steps.find-fork.outputs.fork }} >> status-output
-            RETVAL=$?
+            if playground/playground/repo/repo status ${{ steps.find-fork.outputs.fork }} >> status-output;  then
+              STATUS="signed"
+            else
+              STATUS="unsigned"
+            fi
           else
             echo "Repository does not exist yet" >> status-output
-            RETVAL=1
+            STATUS="uninitialized"
           fi
 
           cat status-output
-          echo "status=$RETVAL" >> $GITHUB_OUTPUT
+          echo "status=$STATUS"
+          echo "status=$STATUS" >> $GITHUB_OUTPUT
 
       - name: Update issue, file PR
         if: steps.find-fork.outputs.fork != github.sha
         uses: actions/github-script@d556feaca394842dc55e4734bf3bb9f685482fa0
         with:
           script: |
+
             const fs = require('fs')
             body = fs.readFileSync('./status-output').toString()
 
-            if (${{ steps.signing-status.outputs.status }} == 0) {
+            if ("${{ steps.signing-status.outputs.status }}" == 'signed') {
               const pull = await github.rest.pulls.create({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
