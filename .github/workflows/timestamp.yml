@@ -63,7 +63,6 @@ jobs:
 
       - name: Commit new timestamp
         if: steps.metadata-init.outputs.init == 'true'
-        working-directory: metadata
         run: |
           git config user.name "TUF Timestamp"
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
