@@ -1,0 +1,93 @@
+name: TUF repository timestamp
+
+# TODO
+# * only timestamp if it makes sense schedule wise (e.g. store expiry period in metadata, bump only if less than 50% is left)
+# * only auth to google cloud if GCP is actually used (currently it always is)
+
+permissions: {}
+
+on:
+  schedule:
+    - cron: '15 6,18 * * *'
+  workflow_dispatch:
+
+jobs:
+  tuf-timestamp:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: 'write' # for access to OIDC token Google Cloud authentication
+      contents: 'write'
+      issues: 'write'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c
+
+      - name: Checkout playground
+        uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c
+        with:
+          repository: jku/repository-playground
+          ref: git-repo
+          path: playground
+
+      - name: Setup Python
+        uses: actions/setup-python@d27e3f3d7c64b4bbf8e4abfb9b63b83e846e0435
+        with:
+          python-version: 3.11
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install -r playground/playground/repo/requirements.txt
+
+      - name: Check Metadata initialization
+        id: metadata-init
+        run: |
+          if [ -e repository/root.json ]; then
+            echo "init=true" >> $GITHUB_OUTPUT
+          else
+            echo "init=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Authenticate to Google Cloud
+        if: steps.metadata-init.outputs.init == 'true'
+        uses: google-github-actions/auth@ef5d53e30bbcd8d0836f4288f5e50ff3e086997d
+        with:
+          token_format: access_token
+          workload_identity_provider: projects/843741030650/locations/global/workloadIdentityPools/git-repo-demo/providers/git-repo-demo
+          service_account: git-repo-demo@python-tuf-kms.iam.gserviceaccount.com
+
+      - name: Timestamp
+        if: steps.metadata-init.outputs.init == 'true'
+        run: playground/playground/repo/repo timestamp
+
+      - name: Commit new timestamp
+        if: steps.metadata-init.outputs.init == 'true'
+        working-directory: metadata
+        run: |
+          git config user.name "TUF Timestamp"
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git commit -a -m "Timestamp"
+          git show
+          git push
+
+      - name: File an issue on timestamp failure
+        if: ${{ failure() }}
+        uses: actions/github-script@d556feaca394842dc55e4734bf3bb9f685482fa0
+        with:
+          script: |
+            const repo = context.repo.owner + "/" + context.repo.repo
+            const issues = await github.rest.search.issuesAndPullRequests({
+              q: "Timestamp+failed+in:title+state:open+type:issue+repo:" + repo,
+            })
+            if (issues.data.total_count > 0) {
+              console.log("Timestamp failed but an issue exists already.")
+            } else {
+              console.log("Timestamp failed. Creating a new issue...")
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: "Timestamp cron job failed",
+                body: "Timestamp cron job just failed. Have you tried turning it off and on again?"
+              })
+            }
