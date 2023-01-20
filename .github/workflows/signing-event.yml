@@ -88,9 +88,9 @@ jobs:
             echo "Repository does not exist yet" >> status-output
             RETVAL=1
           fi
-
           cat status-output
           echo "status=$RETVAL" >> $GITHUB_OUTPUT
+          echo "status=$RETVAL"
 
       - name: Update issue, file PR
         if: steps.find-fork.outputs.fork != github.sha
@@ -99,7 +99,7 @@ jobs:
           script: |
             const fs = require('fs')
             body = fs.readFileSync('./status-output').toString()
-
+            console.log("signing status" + ${{ steps.signing-status.outputs.status }})
             if (${{ steps.signing-status.outputs.status }} == 0) {
               const pull = await github.rest.pulls.create({
                 owner: context.repo.owner,
